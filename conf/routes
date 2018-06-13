@@ -4,7 +4,7 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.WsController.socket
+GET     /                           controllers.HomeController.index
 # An example controller showing how to use dependency injection
 GET     /count                      controllers.CountController.count
 # An example controller showing how to write asynchronous code
@@ -16,11 +16,6 @@ GET     /restApi                 controllers.RestApiController.getName
 +nocsrf
 POST     /user/insert                    controllers.UserController.insert
 
-GET     /user/test                    controllers.UserController.sayHello
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
-
-GET     /user/test1                    controllers.UserController.testUser
-
-GET     /user                    controllers.UserController.index1(p: String)

@@ -15,5 +15,8 @@ libraryDependencies ++= Seq( jdbc , ehcache , ws , specs2 % Test , guice )
 unmanagedResourceDirectories in Test <+=  baseDirectory ( _ /"target/web/public/test" )
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "3.0.0",
-  "mysql" % "mysql-connector-java" % "5.1.34"
+  "mysql" % "mysql-connector-java" % "5.1.34",
+  "be.objectify" %% "deadbolt-scala" % "2.6.0",
+  // https://mvnrepository.com/artifact/org.mindrot/jbcrypt
+  "org.mindrot" % "jbcrypt" % "0.4"
 )
