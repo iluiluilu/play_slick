@@ -3,13 +3,23 @@ package models
 
 import javax.inject.Inject
 
+import be.objectify.deadbolt.scala.models.Subject
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.libs.json.Json
+import security.{SecurityPermission, SecurityRole}
 
 import scala.concurrent.{ExecutionContext, Future}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.MySQLProfile.api._
 
+import scala.collection.mutable.ListBuffer
 
+case class LoginForm(username: String, password: String)
+object LoginForm {
+  implicit val reader = Json.reads[LoginForm]
+}
+
+/***/
 case class UserData(id: Int, username: String, password: String, email: String, created_at: Int, updated_at: Int, created_by: Int, updated_by: Int)
 class UserTableDef(tag: Tag) extends Table[UserData](tag, "users") {
   def id = column[Int]("id", O.PrimaryKey,O.AutoInc)
@@ -24,7 +34,7 @@ class UserTableDef(tag: Tag) extends Table[UserData](tag, "users") {
     (id, username, password, email, created_at, updated_at, created_by, updated_by) <>(UserData.tupled, UserData.unapply)
 }
 
-
+/***/
 case class UserForm(username: String, password: String, email: String)
 class UserFormDef(tag: Tag) extends Table[UserForm](tag, "users") {
 
@@ -35,7 +45,19 @@ class UserFormDef(tag: Tag) extends Table[UserForm](tag, "users") {
     (username, password, email) <> (UserForm.tupled, UserForm.unapply)
 }
 
+/***/
+class UserAuth(username: String, roleList: List[SecurityRole], permissionList: List[SecurityPermission]) extends Subject {
+  override def roles: List[SecurityRole] = roleList
+//    List(SecurityRole("foo"),
+//      SecurityRole("bar"))
 
+  override def permissions: List[SecurityPermission] = permissionList
+//    List(SecurityPermission("printers.edit"))
+
+  override def identifier: String = username
+}
+
+/***/
 class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
                                (implicit executionContext: ExecutionContext)
   extends HasDatabaseConfigProvider[JdbcProfile] {
@@ -44,7 +66,7 @@ class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
 
   private val UserTable  = TableQuery[UserTableDef]
 
-  def getAuthInfo(userId: Int): Unit = {
+  def getAuthInfo(username: String): Future[Option[UserAuth]] = {
     val role = TableQuery[RoleTableDef]
     val permission = TableQuery[PermissionTableDef]
     val userRole = TableQuery[UserRoleTableDef]
@@ -52,26 +74,32 @@ class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
 
 
     val q = (UserTable join userRole on(_.id === _.userId) join role on(_._2.roleId === _.id) join
-      rolePermission on (_._1._2.roleId === _.roleId) join permission on (_._2.permissionId === _.id)).filter(_._1._1._1._1.id === userId).result
-    q.statements.foreach(println)
-    val x = db.run{
+      rolePermission on (_._1._2.roleId === _.roleId) join permission on (_._2.permissionId === _.id)).filter(_._1._1._1._1.username === username).result
+    q.statements.foreach(println) // print query
+    val rs = db.run {
       q
     }
-    x.onComplete{
-      f => {
-        println(f)
-      }
-    }
-    x.foreach{
-      rs => rs.foreach{
-        item =>{
-          val ((((x, y), z), a), b) = item
-          println(x)
-          println(y)
-          println(z)
-          println(a)
-          println(b)
+
+    rs.map {
+      list => {
+        list.size match {
+          case 0 => None
+          case _ => {
+            val username = list.head._1._1._1._1.username
+            val roles = ListBuffer.empty[SecurityRole]
+            val permissions = ListBuffer.empty[SecurityPermission]
+            list.foreach {
+              item =>{
+                val ((((user, userRole), role), rolePermission), permission) = item
+                roles += SecurityRole(role.code)
+                permissions += SecurityPermission(permission.code)
+              }
+            }
+
+            Some(new UserAuth(username, roles.toList, permissions.toList))
+          }
         }
+
       }
     }
   }
@@ -82,30 +110,3 @@ class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
     db.run(UserTable.filter(_.id === userId).delete)
   }
 }
-
-
-
-
-
-/*
-class User(username: String, userRoles: List[String], userPermissions: List[String]) extends Subject {
-  override def identifier: String = username
-
-  override def roles: List[SecurityRole] = {
-
-    var roleList = new ListBuffer[SecurityRole]()
-    userRoles.foreach(r => roleList += SecurityRole(r))
-
-    roleList.toList
-  }
-
-
-
-  override def permissions: List[SecurityPermission] = {
-
-    var permissionList = new ListBuffer[SecurityPermission]()
-    userPermissions.foreach(p => permissionList += SecurityPermission(p))
-
-    permissionList.toList
-  }
-}*/

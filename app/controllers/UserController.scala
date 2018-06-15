@@ -1,40 +1,28 @@
 package controllers
-
-import java.io.{File, PrintWriter}
-import java.nio.file.Files
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import akka.actor.Status.Success
-import controllers.HelloActor.SayHello
-import models.UserForm
+import be.objectify.deadbolt.scala.DeadboltActions
+import models.{LoginForm, UserForm}
 import services.UserService
-//import models.UserFormData
 import play.api.data.Form
 import play.api.data.Forms.mapping
 import play.api.data.Forms.text
 import play.api.mvc.{AbstractController, ControllerComponents}
-//import services.UserService
-import akka.pattern.ask
-import akka.util.Timeout
-import play.api.libs.json.{JsString, JsValue, Json}
 
-import scala.collection.mutable
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Source
-import scala.util.Try
-
 
 @Singleton
-class UserController  @Inject() (actorSystem: ActorSystem, userService: UserService, cc: ControllerComponents)(implicit executionContext: ExecutionContext) extends AbstractController(cc) {
+class UserController  @Inject() (deadbolt: DeadboltActions, actorSystem: ActorSystem, userService: UserService, cc: ControllerComponents)(implicit executionContext: ExecutionContext) extends AbstractController(cc) {
 
-  val helloActor = actorSystem.actorOf(HelloActor.props, "hello-actor")
+  def login = Action.async(parse.json[LoginForm]) { req =>
+    userService.login(req.body)
+  }
 
-  implicit val timeout: Timeout = 5.seconds
 
-  def index = Action {
-    Ok(views.html.user())
+  def index = deadbolt.Restrict(List(Array("admin")))() { authRequest =>
+    val x = authRequest.session
+      Future(Ok(views.html.user()))
   }
 
   val userForm = Form(
@@ -49,7 +37,7 @@ class UserController  @Inject() (actorSystem: ActorSystem, userService: UserServ
     val user: UserForm = userForm.bindFromRequest.get
     val x = userService.insert(user)
 
-    x.onComplete{
+    x.onComplete {
       rs => {
         println(rs)
       }

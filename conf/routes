@@ -15,6 +15,8 @@ GET     /restApi                 controllers.RestApiController.getName
 
 +nocsrf
 POST     /user/insert                    controllers.UserController.insert
++nocsrf
+POST     /user/login                    controllers.UserController.login
 
 
 # Map static resources from the /public folder to the /assets URL path
