@@ -20,30 +20,30 @@ object LoginForm {
 }
 
 /***/
-case class UserData(id: Int, username: String, password: String, email: String, created_at: Int, updated_at: Int, created_by: Int, updated_by: Int)
+case class UserData(id: Int, username: String, password: String, email: String, created_at: Option[Int], updated_at: Option[Int], created_by: Option[Int], updated_by: Option[Int])
 class UserTableDef(tag: Tag) extends Table[UserData](tag, "users") {
   def id = column[Int]("id", O.PrimaryKey,O.AutoInc)
   def username = column[String]("username")
   def password = column[String]("password")
   def email = column[String]("email")
-  def created_at = column[Int]("created_at")
-  def updated_at = column[Int]("updated_at")
-  def created_by = column[Int]("created_by")
-  def updated_by = column[Int]("updated_by")
+  def created_at = column[Option[Int]]("created_at")
+  def updated_at = column[Option[Int]]("updated_at")
+  def created_by = column[Option[Int]]("created_by")
+  def updated_by = column[Option[Int]]("updated_by")
   override def * =
     (id, username, password, email, created_at, updated_at, created_by, updated_by) <>(UserData.tupled, UserData.unapply)
 }
 
 /***/
-case class UserForm(username: String, password: String, email: String)
-class UserFormDef(tag: Tag) extends Table[UserForm](tag, "users") {
-
-  def username = column[String]("username")
-  def password = column[String]("password")
-  def email = column[String]("email")
-  override def * =
-    (username, password, email) <> (UserForm.tupled, UserForm.unapply)
-}
+case class UserForm(var username: String, password: String, email: String)
+//class UserFormDef(tag: Tag) extends Table[UserForm](tag, "users") {
+//
+//  def username = column[String]("username")
+//  def password = column[String]("password")
+//  def email = column[String]("email")
+//  override def * =
+//    (username, password, email) <> (UserForm.tupled, UserForm.unapply)
+//}
 
 /***/
 class UserAuth(username: String, roleList: List[SecurityRole], permissionList: List[SecurityPermission]) extends Subject {
@@ -62,7 +62,7 @@ class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
                                (implicit executionContext: ExecutionContext)
   extends HasDatabaseConfigProvider[JdbcProfile] {
 
-  private val UserForm  = TableQuery[UserFormDef]
+//  private val UserForm  = TableQuery[UserFormDef]
 
   private val UserTable  = TableQuery[UserTableDef]
 
@@ -104,7 +104,12 @@ class User @Inject() (protected val dbConfigProvider: DatabaseConfigProvider)
     }
   }
 
-  def insert(userForm: UserForm): Future[Int] = db.run(UserForm += userForm)
+  def insert(userForm: UserForm): Future[Int] = {
+    userForm.username = "12121"
+//    userForm.copy(username = "sdfsdf")
+//    db.run(UserForm += userForm)
+    Future(1)
+  }
 
   def delete(userId: Int): Unit = {
     db.run(UserTable.filter(_.id === userId).delete)

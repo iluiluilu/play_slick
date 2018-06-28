@@ -23,8 +23,9 @@ class UserService @Inject() (user: User) {
 
 
   def login(loginForm: LoginForm): Future[Result] = {
+
     val userAuth = user.getAuthInfo(loginForm.username)
-    userAuth.map{
+    userAuth.map {
       case Some(x) => JS.OK("reason" -> "xxx").withSession("username" -> x.identifier)
       case None => JS.KO("Sai tên đăng nhập hoặc mật khẩu!")
     }
